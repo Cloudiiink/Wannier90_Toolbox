@@ -36,7 +36,7 @@ def gen_dos_df(dos_data_total, left, right, orb_names=['s', 'py', 'pz', 'px', 'd
         for j in range(len(orb_names)):
             site, orb = structure[i], Orbital(j)
             dos = dos_data_total.get_site_orbital_dos(site, orb)
-            dis = dos_distribute(dos.energies - dos.efermi, dos.densities[Spin.up], [left, right])
+            dis = dos_distribute(dos.energies, dos.densities[Spin.up], [left, right])
             key = site.species_string + '_' + str(i) + '_' + orb_names[j]
             new = pd.DataFrame({"species": site.species_string,
                                 "structure_id": i,
@@ -151,47 +151,20 @@ def w90_string(res_df, structure):
             w90_string_list.append(f"c={site_string}:{orb_string(row['orb'])}")
     print('\n'.join([s for s in w90_string_list]))
 
-def dos_given_orb(dos_data_total, left, right, full_res_df):
+def dos_given_site_orb(dos_data_total, erange, key_string, orb_names=['s', 'py', 'pz', 'px', 'dxy', 'dyz', 'dz2', 'dxz', 'dx2']):
     structure = dos_data_total.structure
+    _, site_id, orb_id = key_string.split('_')
     res = 0
-    for _, row in full_res_df.iterrows():
-        site = structure[row["structure_id"]]
-        orb = Orbital(row["orb_id"])
-        dos = dos_data_total.get_site_orbital_dos(site, orb)
-        dis = dos_distribute(dos.energies - dos.efermi, dos.densities[Spin.up], [left, right])
-        res += dis
-    return res
+    site = structure[int(site_id)]
+    orb = Orbital(orb_names.index(orb_id))
+    dos = dos_data_total.get_site_orbital_dos(site, orb)
+    # TODO handle different magnetic system
+    dis = dos_distribute(dos.energies, dos.densities[Spin.up], erange)
+    return dis
 
-# from dis_win_suggest file
-def get_dis_win_table(band_data, num_wann, n_excl=0, epsilon=0.02):
-    if n_excl < 0:
-        raise ValueError('Wrong Input!')
-
-    nbands = band_data.shape[0]
-    n_choices = nbands-num_wann-n_excl
-    dis_win_table = np.zeros((n_choices, 4))
-
-    # 获取所有可能的能带选择
-    for idx in range(n_choices):
-        dis_win_max  = band_data[n_excl + idx + num_wann - 1].max() + epsilon
-        dis_froz_max = band_data[n_excl + idx + num_wann].min() - epsilon
-        dis_win_min  = band_data[n_excl + idx].min() - epsilon
-        dis_froz_min = band_data[n_excl + idx - 1].max() + epsilon if n_excl + idx > 0 else dis_win_min
-
-        dis_win_table[idx] = np.array((dis_win_max, dis_froz_max, dis_froz_min, dis_win_min))
-
-    return dis_win_table
-
-def print_dis_win_table(dis_win_table):
-    # output the result
-    # print('dis_win_max  : larger than  {0}'.format(dis_win_max))
-    # print('dis_froz_max : smaller than {0}'.format(dis_froz_max))
-    # print('dis_froz_min : smaller than {0}'.format(dis_froz_min))
-    # print('dis_win_min  : smaller than {0}'.format(dis_win_min))
-    print('dis_win_max  dis_froz_max  dis_froz_min  dis_win_min')
-    for line in dis_win_table:
-        dis_win_max, dis_froz_max, dis_froz_min, dis_win_min = line
-        print(f'{dis_win_max:4.2f}  {dis_froz_max:4.2f}  {dis_froz_min:4.2f}  {dis_win_min:4.2f}')
+def dos_given_selected(dos_data_total, erange, selected):
+    dis = [dos_given_site_orb(dos_data_total, erange, key) for key in selected]
+    return np.sum(dis)
 
 def select_str2list(s, orb_names=['s', 'py', 'pz', 'px', 'dxy', 'dyz', 'dz2', 'dxz', 'dx2']):
     def num2list(s):
@@ -274,6 +247,16 @@ def template(flag):
               '\n' \
               'Begin Kpoint_Path\n' \
               'End Kpoint_Path\n')
+    elif flag == 'basic':
+        print('num_wann  = 8\n' \
+              '# num_bands = 15\n' \
+              '\n' \
+              'begin projections\n' \
+              'Ga:l=0;l=1\n' \
+              'As:l=0;l=1\n' \
+              'end projections\n' \
+              '\n' \
+              '# spinors = .true.\n')
     else:
         print('Unknown flag: ', flag)
 
@@ -310,6 +293,7 @@ if __name__ == "__main__":
             print(f'There is no KPOINTS file in {args.path}. Please check your input!')
     elif args.mode[0].lower() == 't':   # print W90 parameter template
         if len(args.extra) == 0:
+            template('basic')
             template('wann')
             template('band')
         else:
@@ -326,59 +310,41 @@ if __name__ == "__main__":
         structure = dos_data_total.structure
         dos_df = gen_dos_df(dos_data_total, left, right)
         print(f"\nCalculated DOS Energy Range: {left}, {right}")
-        print(dos_df[:30])
 
-        norb, simple_res_df, full_res_df = dos_analysis_df(dos_df, pick_rate=pick_rate)
-        nwann = norb if args.no_soc else 2 * norb
-        print(f"\nNumber of Selected Orbitals: {norb}")
-        print(f"\nNumber of Selected WFs: {nwann}")
-        print("\nSelected Orbitals: ")
-        print(simple_res_df)
+        if len(args.extra) == 0:
+            print(dos_df[:30])
+            norb, simple_res_df, full_res_df = dos_analysis_df(dos_df, pick_rate=pick_rate)
+            nwann = norb if args.no_soc else 2 * norb
+            print(f"\nNumber of Selected Orbitals: {norb}")
+            print(f"\nNumber of Selected WFs: {nwann}")
+            print("\nSelected Orbitals: ")
+            print(simple_res_df)
+            print("\nWannier90 Projection:")
+            w90_string(simple_res_df, structure)
 
-        if args.plot:
+            if args.plot:
+                selected = select_str2list(args.extra)
+                plot_dos_dis(dos_df, selected=selected, filename=f'{args.path}/dos_analysis.png')
+
+        else:
             selected = select_str2list(args.extra)
-            plot_dos_dis(dos_df, selected=selected, filename=f'{args.path}/dos_analysis.png')
+            nwann = len(selected) if args.no_soc else 2 * len(selected)
 
-        # Manually Input the Orbital Selection
-        # ------------------------------------
-        # orb id order: s = 0 py = 1 pz = 2 px = 3 dxy = 4 dyz = 5 dz2 = 6 dxz = 7 dx2 = 8
-        # see orb id in pymatgen Orbital https://pymatgen.org/pymatgen.electronic_structure.core.html#pymatgen.electronic_structure.core.Orbital
-        # data = [['Ga', 0, 6],
-        #         ['As', 1, 1],
-        #         ['As', 1, 2],
-        #         ['As', 1, 3]]
-        # full_res_df = pd.DataFrame(data, columns = ['species', 'structure_id', 'orb_id'])
-        # print("\nManually Selected Orbitals: ")
-        # print(full_res_df)
-        # n_orb = 4
+            from dis_win_suggest import W90, get_efermi
 
-        print("\nWannier90 Projection:")
-        w90_string(simple_res_df, structure)
+            w90 = W90(eig=f'{args.path}/EIGENVAL',
+                    path=args.path,
+                    efermi=get_efermi(args, direct=True), 
+                    nbnds_excl=0, 
+                    nwann=nwann, 
+                    ndeg=1)
+            
+            dis_froz_df = w90.get_dis_froz_df(args.erange, eps=4e-3)
+            dis_dos = [dos_given_selected(dos_data_total, (fmin, fmax), selected) for fmin, fmax in zip(dis_froz_df['dis_froz_min'], dis_froz_df['dis_froz_max'])]
+            dis_froz_dos_df = dis_froz_df.assign(dos=dis_dos)
+            dis_froz_dos_df = dis_froz_dos_df.sort_values('dos', ascending=False)
+            N = len(dis_froz_dos_df)
+            print(dis_froz_dos_df)
 
-        # with given dis_froz_min & dis_froz_max value, calculate the dos distribution
-        # parse band data
-
-        # v = Vasprun(band_path + '/' + band_vasprun_file)
-        # bands = v.get_band_structure(band_path + '/' + 'KPOINTS', line_mode=True)
-        # band_data = bands.bands[Spin.up]
-
-        # num_wann = 2 * n_orb if is_soc else n_orb
-        # # n_excl = 0
-        # dis_win_table = get_dis_win_table(band_data, num_wann, n_excl=0, epsilon=0.02)
-        # # print_dis_win_table(dis_win_table)
-        # # 存储为 pandas.DataFrame
-        # dis_win_df = pd.DataFrame(columns=["dis_win_max", "dis_froz_max", "dis_froz_min", "dis_win_min", "dos"])
-        # for line in dis_win_table:
-        #     dis_win_max, dis_froz_max, dis_froz_min, dis_win_min = line
-        #     e_dos = dos_given_orb(dos_data_total, dis_froz_min, dis_froz_max, full_res_df)
-        #     new = pd.DataFrame({"dis_win_max": dis_win_max,
-        #                         "dis_froz_max": dis_froz_max,
-        #                         "dis_froz_min": dis_froz_min,
-        #                         "dis_win_min": dis_win_min,
-        #                         "dos": e_dos}, index=[1])
-        #     dis_win_df = dis_win_df.append(new, ignore_index=True)
-
-        # # 展示前 70% 的数据
-        # threshold = 0.7 * dis_win_df['dos'].max()
-        # print(dis_win_df[dis_win_df['dos'] > threshold])
-
+            if args.plot:
+                plot_dos_dis(dos_df, selected=selected, filename=f'{args.path}/dos_analysis_selected.png')

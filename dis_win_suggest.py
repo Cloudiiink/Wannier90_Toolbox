@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import os, re
 import matplotlib.pyplot as plt
 import sys
@@ -176,31 +177,56 @@ class W90():
     
     def count_states(self, erange):
         emin, emax = erange
-        mask = np.logical_and(w90.eband_min <= emax, w90.eband_max >= emin)
+        mask = np.logical_and(self.eband_min <= emax, self.eband_max >= emin)
         return sum(mask)
 
     def suggest_froz_min(self, emax, nwann=None, eps=4e-3):
         '''
         Lower bound of froz_min for given froz_max and nwann
         '''
-        nwann = nwann if nwann else w90.nwann
-        mask_emax = w90.eband_min <= emax
+        nwann = nwann if nwann else self.nwann
+        mask_emax = self.eband_min <= emax
         idx = np.argmin(mask_emax) - nwann - 1
-        res = int(w90.emin) - 1. if idx < 0 else w90.eband_max[idx] + eps
+        res = int(self.emin) - 1. if idx < 0 else self.eband_max[idx] + eps
         return res
 
     def suggest_froz_max(self, emin, nwann=None, eps=4e-3):
         '''
         Upper bound of froz_max for given froz_min and nwann
         '''
-        nwann = nwann if nwann else w90.nwann
-        mask_emin = w90.eband_max >= emin
+        nwann = nwann if nwann else self.nwann
+        mask_emin = self.eband_max >= emin
         idx = np.argmax(mask_emin) + nwann
-        res = int(w90.emax) + 1. if idx >= w90.nbnds else w90.eband_min[idx] - eps
+        res = int(self.emax) + 1. if idx >= self.nbnds else self.eband_min[idx] - eps
         return res
 
-def get_efermi(args):
-    if args.efermi:
+    def get_dis_froz_df(self, erange, eps=4e-3):
+        # suggest frozen window with given energy interval
+        N = self.count_states(erange)
+        print(f'There are {N} states in {erange} with Fermi level at {self.efermi}.')
+        emin, emax = erange
+        dN = N - self.nwann
+        froz_min_list, froz_max_list = [], []
+
+        if self.nwann <= 0:
+            print(f'Please input vaild number of WF, now is {self.nwann}.')
+            return pd.DataFrame(columns=['dis_froz_min', 'dis_froz_max'])
+
+        elif dN > 0:
+            print('Suggest dis_froz_min & dis_froz_max as following:')
+            print(f'nwann: {self.nwann}    degenercy: {self.ndeg}    Fermi: {self.efermi:12.6f}')
+            for i in range(1, dN + 1, self.ndeg):
+                # First get froz_max for nwann = nwann_input + i, then get froz_min for nwann = nwann_input and froz_max
+                froz_max = self.suggest_froz_max(emin, nwann=self.nwann+i, eps=eps)
+                froz_min = self.suggest_froz_min(froz_max, eps=eps)
+                froz_max_list.append(froz_max)
+                froz_min_list.append(froz_min)
+            return pd.DataFrame(zip(froz_min_list, froz_max_list), columns=['dis_froz_min', 'dis_froz_max'])
+        else:
+            return pd.DataFrame(columns=['dis_froz_min', 'dis_froz_max'])
+
+def get_efermi(args, direct=False):
+    if not direct and args.efermi:
         efermi = float(args.efemri)
     else:
         efermi_str = os.popen(f'grep fermi {args.path}/vasprun.xml').read().strip()
@@ -214,7 +240,7 @@ def get_args():
     '''
     parser = argparse.ArgumentParser(description='CLI Tool for W90 energy windows.', add_help=True)
 
-    parser.add_argument('mode', help='Mode: report, plot, count, support')
+    parser.add_argument('mode', help='Mode: report, plot, count, suggest')
     parser.add_argument('-i', dest='eig', action='store', type=str,
                         default='EIGENVAL',
                         help='Select wannier90.eig file or EIGENVAL file. Default: EIGENVAL')
@@ -258,20 +284,9 @@ if __name__ == "__main__":
         print(f'There are {w90.count_states(args.erange)} states in {args.erange}.')
     elif args.mode[0].lower() == 's': # suggest
         # suggest frozen window with given energy interval
-        N = w90.count_states(args.erange)
-        print(f'There are {N} states in {args.erange} with Fermi level at {w90.efermi}.')
-        emin, emax = args.erange
-        dN = N - w90.nwann
-        if w90.nwann <= 0:
-            print(f'Please input vaild number of WF, now is {w90.nwann}.')
-        elif dN > 0:
-            print('Suggest froz_min & froz_max as following:')
-            print(f'    nwann: {w90.nwann}    degenercy: {w90.ndeg}    Fermi: {w90.efermi}')
-            for i in range(1, dN + 1, w90.ndeg):
-                # First get froz_max for nwann = nwann_input + i, then get froz_min for nwann = nwann_input and froz_max
-                froz_max = w90.suggest_froz_max(emin, nwann=w90.nwann+i)
-                froz_min = w90.suggest_froz_min(froz_max)
-                print(f'    dis_froz_min : {froz_min:+10.5f}    dis_froz_max : {froz_max:+10.5f}')
+        df = w90.get_dis_froz_df(args.erange, eps=4e-3)
+        if len(df) > 0:
+            print(df)
 
     else:
         print(f'Unsupported mode: {args.mode}')
