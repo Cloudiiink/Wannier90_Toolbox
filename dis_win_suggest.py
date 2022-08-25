@@ -180,6 +180,21 @@ class W90():
         mask = np.logical_and(self.eband_min <= emax, self.eband_max >= emin)
         return sum(mask)
 
+    def suggest_win_max(self, emin, nwann=None, eps=4e-3):
+        '''
+        Lower bound of dis_win_max for given froz_min and nwann
+        '''
+        nwann = nwann if nwann else self.nwann
+        mask = self.eband_min >= emin
+        idx = np.argmax(mask) + nwann - 1
+        if idx >= self.nbnds:
+            # TODO handle error case for no enough states
+            print(f'There is no enough states for {emin} with {nwann} WFs!')
+            res = int(self.emax) + 1.
+        else:
+            res = self.eband_max[idx] + eps
+        return res
+
     def suggest_froz_min(self, emax, nwann=None, eps=4e-3):
         '''
         Lower bound of froz_min for given froz_max and nwann
@@ -215,13 +230,26 @@ class W90():
         elif dN > 0:
             print('Suggest dis_froz_min & dis_froz_max as following:')
             print(f'nwann: {self.nwann}    degenercy: {self.ndeg}    Fermi: {self.efermi:12.6f}')
+
             for i in range(1, dN + 1, self.ndeg):
                 # First get froz_max for nwann = nwann_input + i, then get froz_min for nwann = nwann_input and froz_max
                 froz_max = self.suggest_froz_max(emin, nwann=self.nwann+i, eps=eps)
                 froz_min = self.suggest_froz_min(froz_max, eps=eps)
                 froz_max_list.append(froz_max)
                 froz_min_list.append(froz_min)
-            return pd.DataFrame(zip(froz_min_list, froz_max_list), columns=['dis_froz_min', 'dis_froz_max'])
+
+            # number of missing states between `emin` and lowest `dis_froz_min`
+            num_missing = self.count_states((emin, min(froz_min_list)))
+            df = pd.DataFrame(zip(froz_min_list, froz_max_list), columns=['dis_froz_min', 'dis_froz_max'])
+
+            if num_missing > 0:
+                print(f'\nWANRING: There are states between given `emin`: {emin} and lowest `dis_froz_min`: {min(froz_min_list)}. Please carefully treat the suggestion of dis_froz_min / dis_froz_max and check energy range of each bands again. This situation usually happens in no-SOC system with many denegeracy point. But we still want to give you some useful energy window information with states less than number of WFs.\n')
+                for i in range(self.nwann - num_missing + 1, self.nwann, 1):
+                    new = pd.DataFrame({"dis_froz_min" : emin,
+                                        "dis_froz_max" : self.suggest_froz_max(emin, nwann=i)}, index=[1])
+                    df = df.append(new, ignore_index=True)
+
+            return df
         else:
             return pd.DataFrame(columns=['dis_froz_min', 'dis_froz_max'])
 
@@ -284,9 +312,13 @@ if __name__ == "__main__":
         print(f'There are {w90.count_states(args.erange)} states in {args.erange}.')
     elif args.mode[0].lower() == 's': # suggest
         # suggest frozen window with given energy interval
+        print(f'`dis_froz_min` and `dis_froz_max` Table:')
         df = w90.get_dis_froz_df(args.erange, eps=4e-3)
         if len(df) > 0:
             print(df)
+        # dis_windows require energy window containing states larger than number of target WFs. This will also generate some constraint for dis_windows
+        dis_win_max = w90.suggest_win_max(args.erange[0])
+        print(f'\nLowest `dis_win_max` for {args.erange[0]}: {dis_win_max}')
 
     else:
         print(f'Unsupported mode: {args.mode}')

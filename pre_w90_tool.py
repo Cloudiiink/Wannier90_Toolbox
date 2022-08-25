@@ -31,20 +31,27 @@ def dos_distribute(e, dos, window):
 def gen_dos_df(dos_data_total, left, right, orb_names=['s', 'py', 'pz', 'px', 'dxy', 'dyz', 'dz2', 'dxz', 'dx2']):
     structure = dos_data_total.structure
     num_sites = structure.num_sites
+    ee = dos_data_total.energies
+
+    # TODO not fail the task but use `PROCAR` to generate a result, although it might not be accurate enough.
+    if left < ee.min() or right > ee.max():
+        raise ValueError(f'CHECK YOUR INPUT! The energies in `EIGENVAL` is ranged from {ee.min()} to {ee.max()} which not include all the energy ranged from {left} to {right} you input.')
+
     dos_df = pd.DataFrame(columns=["species", "structure_id", "orb_id", "orb_name", "key_string", "dos"])
     for i in range(num_sites):
         for j in range(len(orb_names)):
             site, orb = structure[i], Orbital(j)
             dos = dos_data_total.get_site_orbital_dos(site, orb)
-            dis = dos_distribute(dos.energies, dos.densities[Spin.up], [left, right])
+            dis = dos_distribute(ee, dos.densities[Spin.up], [left, right])
             key = site.species_string + '_' + str(i) + '_' + orb_names[j]
-            new = pd.DataFrame({"species": site.species_string,
-                                "structure_id": i,
-                                "orb_id": j,
-                                "orb_name": orb_names[j],
-                                "key_string": key,
-                                "dos": dis}, index=[1])
+            new = pd.DataFrame({"species"      : site.species_string,
+                                "structure_id" : i,
+                                "orb_id"       : j,
+                                "orb_name"     : orb_names[j],
+                                "key_string"   : key,
+                                "dos"          : dis}, index=[1])
             dos_df = dos_df.append(new, ignore_index=True)
+    dos_df['dos'] = dos_df['dos'] / max(dos_df['dos'])      # Renormalize
     return dos_df
 
 def plot_dos_dis(dos_df, pct=1, selected=set(), path='.', filename='dos_analysis.png', colors=['brown', 'orange']):
@@ -59,6 +66,7 @@ def plot_dos_dis(dos_df, pct=1, selected=set(), path='.', filename='dos_analysis
     mask = np.array(color) == colors[0]
     print(f'Plot {len(df)} orbitals with {sum(mask)} selected')
     df.plot.barh(x="key_string", y="dos", color=color, figsize=(8, 20))
+    plt.grid(axis='x')
     plt.savefig(filename, dpi=200, bbox_inches='tight', transparent=True)
 
 # 返回最终选择的 轨道数量 和 轨道列表, 以 pandas.DataFrame 的形式
@@ -302,6 +310,7 @@ if __name__ == "__main__":
         export_vasp_band(args.path)
     elif args.mode[0].lower() == 'd':   # DOS Analysis
         left, right = args.erange #-4, 8
+        left, right = (right, left) if right < left else (left, right)
         pick_rate = args.pick #0 .08
 
         vasprun = Vasprun(f"{args.path}/vasprun.xml")
@@ -312,7 +321,7 @@ if __name__ == "__main__":
         print(f"\nCalculated DOS Energy Range: {left}, {right}")
 
         if len(args.extra) == 0:
-            print(dos_df[:30])
+            print(dos_df)
             norb, simple_res_df, full_res_df = dos_analysis_df(dos_df, pick_rate=pick_rate)
             nwann = norb if args.no_soc else 2 * norb
             print(f"\nNumber of Selected Orbitals: {norb}")
@@ -333,16 +342,24 @@ if __name__ == "__main__":
             from dis_win_suggest import W90, get_efermi
 
             w90 = W90(eig=f'{args.path}/EIGENVAL',
-                    path=args.path,
-                    efermi=get_efermi(args, direct=True), 
-                    nbnds_excl=0, 
-                    nwann=nwann, 
-                    ndeg=1)
-            
+                      path=args.path,
+                      efermi=get_efermi(args, direct=True), 
+                      nbnds_excl=0, 
+                      nwann=nwann, 
+                      ndeg=1)
+
             dis_froz_df = w90.get_dis_froz_df(args.erange, eps=4e-3)
-            dis_dos = [dos_given_selected(dos_data_total, (fmin, fmax), selected) for fmin, fmax in zip(dis_froz_df['dis_froz_min'], dis_froz_df['dis_froz_max'])]
-            dis_froz_dos_df = dis_froz_df.assign(dos=dis_dos)
-            dis_froz_dos_df = dis_froz_dos_df.sort_values('dos', ascending=False)
+            dis_tdos_l, dis_pdos_l, percent_l = [], [], []
+            for fmin, fmax in zip(dis_froz_df['dis_froz_min'], dis_froz_df['dis_froz_max']):
+                dis_pdos = dos_given_selected(dos_data_total, (fmin, fmax), selected)
+                dis_tdos = dos_distribute(vasprun.tdos.energies, vasprun.tdos.densities[Spin.up], (fmin, fmax))
+                percent  = dis_pdos / dis_tdos
+                dis_tdos_l.append(dis_tdos)
+                dis_pdos_l.append(dis_pdos)
+                percent_l.append(percent)
+
+            dis_froz_dos_df = dis_froz_df.assign(pdos=dis_pdos_l, tdos=dis_tdos_l, percent=percent_l)
+            dis_froz_dos_df = dis_froz_dos_df.sort_values('percent', ascending=False)
             N = len(dis_froz_dos_df)
             print(dis_froz_dos_df)
 

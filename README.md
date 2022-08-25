@@ -28,6 +28,14 @@ optional arguments:
   --extra EXTRA     Extra input.
 ```
 
+
+
+in `dos` mode, 我们可以利用 `--extra` 参数额外传入选择的元素和轨道成分, 进而分析其在关注的能量范围内所有轨道成分的占比和排序情况. 其中原子位置序号从 0 开始排序, 轨道成分以如下规则切换为数字表示. 可以使用 `-` 表示连续的数字输入, 如 `Ga,1,1-3` 表示选择 Ga 的序号为 1 的原子中 p 轨道电子. `s = 0 py = 1 pz = 2 px = 3 dxy = 4 dyz = 5 dz2 = 6 dxz = 7 dx2 = 8` 来自 https://pymatgen.org/pymatgen.electronic_structure.core.html#pymatgen.electronic_structure.core.Orbital
+
+
+
+
+
 <img src="README-assets/c5241aabfc388218b8c6e931ae8a841540c85aa2.png" title="" alt="dos_analysis.png" width="318">
 
 ```
