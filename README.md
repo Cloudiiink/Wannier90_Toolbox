@@ -291,10 +291,10 @@ optional arguments:
 Since the VASP and Wannier90 apply different kpoints in band calculation, we need to use B-spline to interpolate the Wannier90 band data and compare with VASP band data. The quality of Wannier90 result is evaulated from
 
 $$
-\Delta_i= \frac{1}{N_{\mathbf{k}}} \sum_{\mathbf{k}}\left|\varepsilon_{i, \mathbf{k}}^{\mathrm{DFT}}-\varepsilon_{i, \mathbf{k}}^{\mathrm{TB}}\right|{\color{red} f\left(\varepsilon_{i, \mathbf{k}}^{\mathrm{DFT}}\right)}
+\Delta_i= \max_{\mathbf{k}}\left|\varepsilon_{i, \mathbf{k}}^{\mathrm{DFT}}-\varepsilon_{i, \mathbf{k}}^{\mathrm{TB}}\right|{\color{red} f\left(\varepsilon_{i, \mathbf{k}}^{\mathrm{DFT}}\right)}
 $$
 
-for each band. $f(\cdot)$ is the kernel function (unit function or gaussian function). $i$ and $\bf k$ represent band index and kpoint separately.
+for each band. $$f(\cdot)$$ is the kernel function (unit function or gaussian function). $$i$$ and $$\bf k$$ represent band index and kpoint separately.
 
 Example usage:
 
