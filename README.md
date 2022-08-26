@@ -115,7 +115,7 @@ Since `dis_windows` require an energy window containing states larger than the n
 
 The selected projection can also be plotted by adding the argument `--plot`. Remind of your input energy range.
 
-<img title="" src="file:///D:/OneDrive/文档/GitHub/Wannier90_Toolbox/image/dos_analysis_selected.png" alt="" data-align="center" width="274">
+<img title="" src="image/dos_analysis_selected.png" alt="" data-align="center" width="274">
 
 ⚠ Notice that if the input energy is too small to containing enough states, the suggestion will become empty.
 
@@ -219,7 +219,7 @@ Band No.     EMIN        EMAX
 
 The result can output to `eigenval_dis.png` by switching `report` mode to `plot` mode.
 
-![](D:\OneDrive\文档\GitHub\Wannier90_Toolbox\image\eigenval_dis.png)
+![](image\eigenval_dis.png)
 
 The `count` mode gives how many states inside the given energy window.
 
@@ -294,7 +294,9 @@ $$
 \Delta_i= \max_{\mathbf{k}}\left|\varepsilon_{i, \mathbf{k}}^{\mathrm{DFT}}-\varepsilon_{i, \mathbf{k}}^{\mathrm{TB}}\right|{\color{red} f\left(\varepsilon_{i, \mathbf{k}}^{\mathrm{DFT}}\right)}
 $$
 
-for each band. $$f(\cdot)$$ is the kernel function (unit function or gaussian function). $$i$$ and $$\bf k$$ represent band index and kpoint separately.
+for each band. $f(\cdot)$ is the kernel function (unit function or gaussian function). $i$ and $\bf k$ represent band index and kpoint separately.
+
+<img title="" src="image/GaAs2_VASP_W90_cmp_zoomin.png" alt="" data-align="center" width="640">
 
 Example usage:
 
