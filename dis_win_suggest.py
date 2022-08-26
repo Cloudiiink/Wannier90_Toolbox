@@ -140,7 +140,7 @@ class W90():
         ax.set(ylabel='Energy / eV')
         ax.grid()
 
-        plt.savefig(savefig, dpi=480)
+        plt.savefig(savefig, dpi=200, bbox_inches='tight', transparent=True)
         # plt.show()
 
     def report_eigenval(self, erange=None, separate=False):

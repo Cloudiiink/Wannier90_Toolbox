@@ -152,7 +152,7 @@ def show_vasp_w90_diff(dEs, wgts):
 
     # Normalization: dE = dEs / wgts
     N = len(dEs)
-    logger.info('=== DIFF of VASP vs W90 with each bands (meV) ===')
+    logger.info('=== MAX DIFF of VASP vs W90 with each bands (meV) ===')
     gp.plot(np.linspace(1, N, N), dEs,
             _with    = 'lines',
             terminal = 'dumb 100, 30',
@@ -181,6 +181,8 @@ def show_spreading(path):
         logger.info(f"There if no `{path}/wannier90.wout`.")
 
 def show_all_fonts():
+    # Ref: python - How to get a list of all the fonts currently available for Matplotlib? - Stack Overflow
+    # https://stackoverflow.com/questions/8753835/how-to-get-a-list-of-all-the-fonts-currently-available-for-matplotlib
     from matplotlib import font_manager as fm
     fpaths = fm.findSystemFonts()
     family_name = set([fm.get_font(i).family_name for i in fpaths])

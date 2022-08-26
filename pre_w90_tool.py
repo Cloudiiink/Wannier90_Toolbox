@@ -226,7 +226,7 @@ def export_vasp_band(path):
         export2dat(kk, bands.bands[Spin.up], f'{path}/bnd.dat')
     elif nspin == 2:
         print('NSPIN = 2')
-        print('export band data to `bnd_up.dat` and `bnd.down.dat` seperatly.')
+        print('export band data to `bnd_up.dat` and `bnd_down.dat` separatly.')
         export2dat(kk, bands.bands[Spin.up], f'{path}/bnd_up.dat')
         export2dat(kk, bands.bands[Spin.down], f'{path}/bnd_down.dat')
 
@@ -362,6 +362,9 @@ if __name__ == "__main__":
             dis_froz_dos_df = dis_froz_dos_df.sort_values('percent', ascending=False)
             N = len(dis_froz_dos_df)
             print(dis_froz_dos_df)
+
+            dis_win_max = w90.suggest_win_max(args.erange[0])
+            print(f'\nLowest `dis_win_max` for {args.erange[0]}: {dis_win_max}')
 
             if args.plot:
                 plot_dos_dis(dos_df, selected=selected, filename=f'{args.path}/dos_analysis_selected.png')

@@ -1,21 +1,28 @@
 # Wannier90_Toolbox
 
-Useful tools integrated for VASP/Wannier90 interface
+Useful tools integrated for VASP/Wannier90 interface:
 
-### 1. Pre Wannier90 工具 `pre_w90_tool.py`
+1. Give suggestions about key inputs for Wannier90 including `projection` and `dis_windows`.
 
-`pre_w90_tool.py` 功能和使用方式
+2. Easy-accessible help function for Wannier90 input.
+
+3. Evaluate Wannier90 interpolation result.
+
+4. low requirement for running. Requirement: `pymatgen` andother common python packages `numpy`, `matplotlib` and `scipy`.
+
+## 1. Pre-Wannier90 Tool
+
+`pre_w90_tool.py` offers different outputs with arguments input including DOS (density of states) analysis and suggestions for Wannier90 input.
 
 ```
 usage: pre_w90_tool.py [-h] [--path PATH] [--no-soc] [--pick PICK]
                        [-e ERANGE ERANGE] [--plot] [--extra EXTRA]
                        mode
 
-Pre analysis before Wannier90 Interpolation. dos: python pre_w90_tool.py dos
---plot -e -4 7 --extra 'Bi,4-7,0-3;F,8-23,1-3'
+Pre analysis before Wannier90 Interpolation.
 
 positional arguments:
-  mode              Mode: kpath, band, template, dos
+  mode              Mode: dos, kpath, band, template
 
 optional arguments:
   -h, --help        show this help message and exit
@@ -28,96 +35,114 @@ optional arguments:
   --extra EXTRA     Extra input.
 ```
 
+The `dos` mode is the essential utility in `pre_w90_tool.py`. The program will give the suggestion of projection including total DOS (density of states) and projected DOS within a given energy range with input `-e` arguments.
 
+First, `per_w90_tool.py` will give the dos distribution of each orbital at each atom. 
 
-in `dos` mode, 我们可以利用 `--extra` 参数额外传入选择的元素和轨道成分, 进而分析其在关注的能量范围内所有轨道成分的占比和排序情况. 其中原子位置序号从 0 开始排序, 轨道成分以如下规则切换为数字表示. 可以使用 `-` 表示连续的数字输入, 如 `Ga,1,1-3` 表示选择 Ga 的序号为 1 的原子中 p 轨道电子. `s = 0 py = 1 pz = 2 px = 3 dxy = 4 dyz = 5 dz2 = 6 dxz = 7 dx2 = 8` 来自 https://pymatgen.org/pymatgen.electronic_structure.core.html#pymatgen.electronic_structure.core.Orbital
+$$
+\text{DOS} = \int_{E_1}^{E_2} \text{dos}_{atom, orb}(E)\,\mathrm{dE}
+$$
 
+⚠ Since the default value of `EMIN` and `the EMAX` in VASP is lowest and highest KS-eigenvalue, please mind that there might be some problems for integral calculation outside the `EMIN` and `EMAX` interval. 
 
-
-
-
-<img src="README-assets/c5241aabfc388218b8c6e931ae8a841540c85aa2.png" title="" alt="dos_analysis.png" width="318">
+In `GaAs` example, `python pre_w90_tool.py dos -e 2 5 --plot --no-soc --pick 0.15` gives
 
 ```
-Reading vasprun.xml file from `./vasprun.xml` for dos analysis
-
-Calculated DOS Energy Range: -4.0, 7.0
+Calculated DOS Energy Range: 2.0, 5.0
    species structure_id orb_id orb_name key_string       dos
-0       Rb            0      0        s     Rb_0_s  0.037680
-1       Rb            0      1       py    Rb_0_py  0.012406
-2       Rb            0      2       pz    Rb_0_pz  0.011214
-3       Rb            0      3       px    Rb_0_px  0.012405
-4       Rb            0      4      dxy   Rb_0_dxy  0.003787
-5       Rb            0      5      dyz   Rb_0_dyz  0.003915
-6       Rb            0      6      dz2   Rb_0_dz2  0.005617
-7       Rb            0      7      dxz   Rb_0_dxz  0.003784
-8       Rb            0      8      dx2   Rb_0_dx2  0.003657
-9       Rb            1      0        s     Rb_1_s  0.065030
-10      Rb            1      1       py    Rb_1_py  0.005342
-11      Rb            1      2       pz    Rb_1_pz  0.005213
-12      Rb            1      3       px    Rb_1_px  0.005343
-13      Rb            1      4      dxy   Rb_1_dxy  0.001042
-14      Rb            1      5      dyz   Rb_1_dyz  0.000782
-15      Rb            1      6      dz2   Rb_1_dz2  0.002346
-16      Rb            1      7      dxz   Rb_1_dxz  0.000651
-17      Rb            1      8      dx2   Rb_1_dx2  0.001042
-18      Rb            2      0        s     Rb_2_s  0.054866
-19      Rb            2      1       py    Rb_2_py  0.005343
-20      Rb            2      2       pz    Rb_2_pz  0.008862
-21      Rb            2      3       px    Rb_2_px  0.005343
-22      Rb            2      4      dxy   Rb_2_dxy  0.001173
-23      Rb            2      5      dyz   Rb_2_dyz  0.000912
-24      Rb            2      6      dz2   Rb_2_dz2  0.001564
-25      Rb            2      7      dxz   Rb_2_dxz  0.000912
-26      Rb            2      8      dx2   Rb_2_dx2  0.001173
-27      Rb            3      0        s     Rb_3_s  0.048115
-28      Rb            3      1       py    Rb_3_py  0.009283
-29      Rb            3      2       pz    Rb_3_pz  0.008093
+0       Ga            0      0        s     Ga_0_s  0.023871
+1       Ga            0      1       py    Ga_0_py  0.195084
+2       Ga            0      2       pz    Ga_0_pz  0.282813
+...
+```
 
-Number of Selected Orbitals: 45
+⚠ Notice that `dos` column is normalized with maximum of 1 and the energy doesn't subtract the Fermi level. If we add argument `--plot`, `pre_w90_tool.py` will generate a histogram with `key_string` and `dos`. In order to not make the figure too long, there is a threshold for histogram plotting that the dos distribution is at least 0.01.
 
-Number of Selected WFs: 90
+<img title="" src="image/dos_analysis.png" alt="" data-align="center" width="257">
+
+Based on the dos distribution and `--pick pick_rate` input, we choose the DOS distribution larger than `pick_rate` as the projection input for Wannier90. Related output as following
+
+```
+Number of Selected Orbitals: 6
+
+Number of Selected WFs: 6
 
 Selected Orbitals: 
-   species site       orb
-0        F    8       [p]
-1        F    9  [py, px]
-2        F   10       [p]
-3        F   11      [pz]
-4        F   15      [pz]
-5        F   16  [py, px]
-6        F   17       [p]
-7        F   18       [p]
-8        F   19       [p]
-9        F   20  [py, px]
-10       F   21      [pz]
-11       F   22  [py, px]
-12       F   23       [p]
-13      Bi   -1    [s, p]
-Plot with selected orbitals in brown and not selected orbitals in orange.
-64 orbitals selected
-Plot 77 orbitals with 55 selected
+  species site  orb
+0      Ga   -1  [p]
+1      As   -1  [p]
 
 Wannier90 Projection:
-c=0.796077,0.796077,0.388318:l=1
-c=0.483654,0.483654,0.450903:py;px
-c=0.160467,0.160467,0.481326:l=1
-c=0.845610,0.845610,0.536804:pz
-c=0.647194,0.647194,0.941660:pz
-c=0.342466,0.342466,0.027646:py;px
-c=0.999237,0.999237,0.997965:l=1
-c=0.696831,0.696831,0.090252:l=1
-c=0.393290,0.393290,0.179315:l=1
-c=0.050074,0.050074,0.149652:py;px
-c=0.746405,0.746405,0.239254:pz
-c=0.442817,0.442817,0.328464:py;px
-c=0.099691,0.099691,0.299079:l=1
-Bi:l=0;l=1
+Ga:l=1
+As:l=1
 ```
 
-### 2. 能量窗口推荐以及必要输入生成 `dis_win_suggest.py`
+⚠ Notice that the number of selected orbitals is not always equal to the number of WFs (Wannier function). When the system includes SOC, there are twice of the number orbitals needed for WFs. This is controlled by the argument `--no-soc`. It becomes important when we input the argument `--extra`  for `dis_windows` suggestion.
 
-`dis_win_suggest.py` 功能和使用方式
+Make full use of the above message, we can decide the projections for Wannier90 input. These projections can also be parsed to `pre_w90_tool.py` by following
+
+```
+python pre_w90_tool.py dos -e -6 14 --plot --no-soc --extra 'Ga,0,1-3;As,1,1-3'Calculated DOS Energy Range: -6.0, 14.0
+There are 10 states in [-6.0, 14.0] with Fermi level at 3.467.
+Suggest dis_froz_min & dis_froz_max as following:
+nwann: 6    degenercy: 1    Fermi:     3.467000
+
+WANRING: There are states between given `emin`: -6.0 and lowest `dis_froz_min`: 3.470754. Please carefully treat the suggestion of dis_froz_min / dis_froz_max and check energy range of each bands again. This situation usually happens in no-SOC system with many denegeracy point. But we still want to give you some useful energy window information with states less than number of WFs.
+
+   dis_froz_min  dis_froz_max      pdos       tdos   percent
+4     -6.000000      5.220833  1.172082   2.663917  0.439984
+0      3.470754     10.658390  2.108112   6.807999  0.309652
+3      7.464829     14.206528  3.352538  10.885037  0.307995
+2      3.470755     12.387263  3.097869  10.639155  0.291176
+1      3.470755     12.060134  3.153824  11.116874  0.283697
+5     -6.000000      7.175487  2.794993   9.946576  0.281000
+
+Lowest `dis_win_max` for -6.0: 13.100133999999999
+```
+
+⚠ If you input the energy range for integral calculation outside the `EMIN` and `EMAX` interval, you might get unreasonable result of `pdos` and `tdos`.
+
+First, the `--extra` argument is separated by `;` and each part consists of `species, structure_id, orbital_id`. The setting of `structure_id` and `orbital_id` is the same as [`pymatgen`](https://pymatgen.org/pymatgen.electronic_structure.core.html#pymatgen.electronic_structure.core.Orbital) starting from `0`. These indices of orbitals are basically the order in
+which the orbitals are reported in VASP and have no special meaning. You can use `-` to replace the continuous number. For example, you can use `0-3` to replace `0,1,2,3` both in `structure_id` and `orbital_id` input.
+
+The `pdos` column gives the summation of all the atom and orbital input. The `tdos` column gives the total DOS. The `percent` column gives the quotient of both.
+
+⚠ For system without SOC,  there are many degeneracy points affecting our dis energy suggest procedure.  
+
+⚠ The percentage of `pdos` versus `tdos` doesn't directly mean the quality of fitting.
+
+Since `dis_windows` require an energy window containing states larger than the number of target WFs. We also give the lowest bound for `dis_win_max` if you make the lower input energy become`dis_win_min`.
+
+The selected projection can also be plotted by adding the argument `--plot`. Remind of your input energy range.
+
+<img title="" src="file:///D:/OneDrive/文档/GitHub/Wannier90_Toolbox/image/dos_analysis_selected.png" alt="" data-align="center" width="274">
+
+⚠ Notice that if the input energy is too small to containing enough states, the suggestion will become empty.
+
+```
+$ python pre_w90_tool.py dos -e 2 5 --plot --no-soc --extra 'Ga,0,1-3;As,1,1-3'
+
+Calculated DOS Energy Range: 2.0, 5.0
+There are 4 states in [2.0, 5.0] with Fermi level at 3.467.
+Empty DataFrame
+Columns: [dis_froz_min, dis_froz_max, pdos, tdos, percent]
+Index: []
+Plot with selected orbitals in `brown` and not selected orbitals in `orange`.
+6 orbitals selected
+Plot 14 orbitals with 6 selected
+```
+
+`pre_w90_tool.py` also gives some other useful messages for Wannier90 input.
+
+- In `kpath` mode, `pre_w90_tool.py` converts VASP-type `{path}/KPOINTS` into `Wannier90` input .
+
+- In `band` mode, `pre_w90_tool.py` generates `bnd.dat` file with k-distance and energy eigenvalue in p4vasp-format in `{path}` folder. For spinful system, `pre_w90_tool.py` will export band data to `bnd_up.dat` and `bnd_down.dat` separately.
+
+- In `template` mode, `pre_w90_tool.py` offers templates for `wannier90.win`. Within `extra` input (`basic`, `wann`, `band`), we can choose one of the detailed parts to print.
+
+## 2. EIGENVAL Analysis
+
+Since we have some `dis_windows` suggestions from `pre_w90_tool.py`, you might need`dis_win_suggest.py` to offer a more detailed eigenvalue analysis. The eigenvalue file can be `EIGENVAL` and `wannier90.eig`.
 
 ```
 usage: dis_win_suggest.py [-h] [-i EIG] [--path PATH] [--efermi EFERMI]
@@ -128,7 +153,7 @@ usage: dis_win_suggest.py [-h] [-i EIG] [--path PATH] [--efermi EFERMI]
 CLI Tool for W90 energy windows.
 
 positional arguments:
-  mode              Mode: report, plot, count, support
+  mode              Mode: report, plot, count, suggest
 
 optional arguments:
   -h, --help        show this help message and exit
@@ -139,14 +164,99 @@ optional arguments:
                     `vasprun.xml`.
   -w NWANN          Number of Wannier Functions. Default: 0
   -n NBNDS_EXCL     Number of bands excluded
-  -d NDEG           Number of degeneracy
+  -d NDEG           Number of degeneracy.
   -e ERANGE ERANGE  Energy range.
   --separate        Calculate bands not separately.
 ```
 
-### 3. VASP 和 Wannier90 能带比较 `cmp_vasp_w90.py`
+The `report` mode prints a table about the distribution of eigenvalues. 
 
-`cmp_vasp_w90.py` 功能和使用方式
+```
+python dis_win_suggest.py report 
+```
+
+```
+EFERMI:  3.467000
+--------------------------------
+Band No.     EMIN        EMAX
+--------------------------------
+  0~  2   -11.34863   -11.21636
+  3~  4   -11.20861   -11.17761
+  5~  5    -8.90720    -6.59268
+  6~  8    -3.10932    +3.46676
+  9~ 35    +3.61018   +41.52101
+--------------------------------
+```
+
+So we can clear see the Fermi level is located at `3.467` and there is a gap between `-6.59268` and `-3.10932`. It's also the reason why we use `-e -6 15` in previous section for `dis_windows` suggestion.
+
+Detailed distribution of each band can be achieved by argument `--separate`. We can also use `-e` to control the band energy to show.
+
+```
+python dis_win_suggest.py report --separate -e -6 15 -d 1
+```
+
+```
+EFERMI:  3.467000
+--------------------------------
+Band No.     EMIN        EMAX
+--------------------------------
+    6      -3.10932    +3.46675
+    7      -0.24141    +3.46676
+    8      +0.51331    +3.46676
+    9      +3.61018    +7.46083
+   10      +5.22483    +9.11682
+   11      +7.17949   +13.09613
+   12      +7.17949   +13.09614
+   13     +10.66239   +13.96102
+   14     +12.06413   +16.37072
+   15     +12.39126   +17.32905
+   16     +14.21053   +18.69125
+   17     +14.89751   +19.88154
+   18     +14.89751   +21.08752
+--------------------------------
+```
+
+The result can output to `eigenval_dis.png` by switching `report` mode to `plot` mode.
+
+![](D:\OneDrive\文档\GitHub\Wannier90_Toolbox\image\eigenval_dis.png)
+
+The `count` mode gives how many states inside the given energy window.
+
+```
+$ python dis_win_suggest.py count -e -6 15
+
+There are 13 states in [-6.0, 15.0].
+```
+
+The `suggest` mode gives the `dis_windows` suggestion the same as `pre_w90_tool.py` requiring you manually input the number of WFs through argument `-w` but without `tdos` and `pdos`. Since this report only requires `EIGENVAL` or `wannier90.eig`, so it's much faster than `pre_w90_tool.py` especially your `vasprun.xml` is quiet large.
+
+```
+$ python dis_win_suggest.py suggest -e -6 15 -d 1 -w 6
+
+Lowest `dis_win_max` for -6.0: 13.100133999999999
+`dis_froz_min` and `dis_froz_max` Table:
+There are 13 states in [-6.0, 15.0] with Fermi level at 3.467.
+Suggest dis_froz_min & dis_froz_max as following:
+nwann: 6    degenercy: 1    Fermi:     3.467000
+
+WANRING: There are states between given `emin`: -6.0 and lowest `dis_froz_min`: 3.470754. Please carefully treat the suggestion of dis_froz_min / dis_froz_max and check energy range of each bands again. This situation usually happens in no-SOC system with many denegeracy point. But we still want to give you some useful energy window information with states less than number of WFs.
+
+   dis_froz_min  dis_froz_max
+0      3.470754     10.658390
+1      3.470755     12.060134
+2      3.470755     12.387263
+3      7.464829     14.206528
+4      9.120819     14.893510
+5      9.120819     14.893510
+6     13.100137     17.779136
+7     -6.000000      5.220833
+8     -6.000000      7.175487
+```
+
+## 3. Comparison of VASP and Wannier90 results
+
+After Wannier90 have wannierised and interpolated band structure, `cmp_vasp_w90.py` can compare the first-principle DFT results from VASP with Wannier90 band data.
 
 ```
 usage: cmp_vasp_w90.py [-h] [--efermi EFERMI] [--path PATH] [--vasp VASP] [--ylim YLIM YLIM]
@@ -178,88 +288,116 @@ optional arguments:
   --quiet               Equal to --no-spreading --no-quality
 ```
 
-列出所有可以直接传入 `rcParams` 的字体名
+Since the VASP and Wannier90 apply different kpoints in band calculation, we need to use B-spline to interpolate the Wannier90 band data and compare with VASP band data. The quality of Wannier90 result is evaulated from
 
-```python
-from matplotlib import font_manager as fm
-fpaths = fm.findSystemFonts()
-family_name = set([fm.get_font(i).family_name for i in fpaths])
-print(sorted(family_name))
+$$
+\Delta_i= \frac{1}{N_{\mathbf{k}}} \sum_{\mathbf{k}}\left|\varepsilon_{i, \mathbf{k}}^{\mathrm{DFT}}-\varepsilon_{i, \mathbf{k}}^{\mathrm{TB}}\right|{\color{red} f\left(\varepsilon_{i, \mathbf{k}}^{\mathrm{DFT}}\right)}
+$$
+
+for each band. $f(\cdot)$ is the kernel function (unit function or gaussian function). $i$ and $\bf k$ represent band index and kpoint separately.
+
+Example usage:
+
 ```
+$ python cmp_vasp_w90.py GaAs2 --kernel unit,3.5,1 --ylim -1 1
 
-> [python - How to get a list of all the fonts currently available for Matplotlib? - Stack Overflow](https://stackoverflow.com/questions/8753835/how-to-get-a-list-of-all-the-fonts-currently-available-for-matplotlib)
-
-```
 INFO:cmp:Reading Data from ./bnd.dat
-INFO:cmp:k label: ['Y', 'X1', 'N', 'G', 'Y', 'F', 'L', 'I', 'F1', 'Z', 'I1', 'M', 'G', 'X']
-INFO:cmp:Energy range: (-6.36847203, 9.601045169999999)
-INFO:cmp:Output figure: ./trinew4_VASP_W90_cmp.png
+INFO:cmp:k label: ['G', 'X', 'W', 'K', 'G', 'L', 'U', 'W', 'L', 'K', 'U', 'X']
+INFO:cmp:Energy range: [-1.0, 1.0]
+INFO:cmp:Output figure: ./GaAs2_VASP_W90_cmp.png
 INFO:cmp:Evaluating Band Quality:
-INFO:cmp:nbnds_excl: 72
-INFO:cmp:=== DIFF of VASP vs W90 with each bands (meV) ===
+INFO:cmp:nbnds_excl: 6
+INFO:cmp:=== MAX DIFF of VASP vs W90 with each bands (meV) ===
 
 
 
-  140 ++-----------+------------+------------+-----------+------------+-*----------+-----------++
-      +            +            +            +           +            * **         +            +
-      |                                                               ****                      |
-      |                                                               **  *                     |
-  120 ++                                                             **   *                    ++
-      |                                                              **   *     **              |
-      |                                                              **   *     **              |
-  100 ++                                                            *     *     **             ++
-      |                                                             *     *    * *              |
-      |                                                             *      * * * *              |
-      |                                                             *      * *** *              |
-   80 ++                                                            *      * *   *             ++
-      |                                                             *      * *   *              |
-      |                                                             *      * *   *              |
-   60 ++                                                            *      * *   *             ++
-      |                                                             *       **   *              |
-      |                                                             *       **   *              |
-      |                                                             *       **   *              |
-   40 ++                                            *               *       **   *             ++
-      |                                             *               *       **   *              |
-      |                                             *               *       **    *             |
-   20 ++                   *                       * *            ***        *    *            ++
-      |                    **           *          * *  *         *          *    *             |
-      |                   ** *     **  ***   **   ** *** ***     *                 *            |
-      +            +      *  **** ******  **** ****      * *******    +            *            +
-    0 +*******************------+**----------*-----------+------------+------------******------++
-      0            20           40           60          80          100          120          140
+    1 ++----------------+-----------------+-----------------+-----------------+----------------++
+      +                 +                 +                 +                 +                 +
+      |                                                                                         |
+      |                                                                                         |
+      |                                                                                         |
+      |                                                                                         |
+  0.5 ++                                                                                       ++
+      |                                                                                         |
+      |                                                                                         |
+      |                                                                                         |
+      |                                                                                         |
+      |                                                                                         |
+    0 *******************************************************************************************
+      |                                                                                         |
+      |                                                                                         |
+      |                                                                                         |
+      |                                                                                         |
+      |                                                                                         |
+      |                                                                                         |
+ -0.5 ++                                                                                       ++
+      |                                                                                         |
+      |                                                                                         |
+      |                                                                                         |
+      |                                                                                         |
+      +                 +                 +                 +                 +                 +
+   -1 ++----------------+-----------------+-----------------+-----------------+----------------++
+      1                 2                 3                 4                 5                 6
 
-INFO:cmp:Average dE (meV): 30.148142230465407
+Gnuplot warns: Warning: empty y range [0:0], adjusting to [-1:1]
+cmp_vasp_w90.py:160: RuntimeWarning: invalid value encountered in double_scalars
+  logger.info(f'Average dE (meV): {np.sum(dEs) / np.sum(wgts)}')
+INFO:cmp:Average dE (meV): nan
 INFO:cmp:Show spreading convergence:
 
 
 
-       +--------------+--------------+--------------+-------------+--------------+--------------+
-       +              +              +              +             +              +              +
-  1800 ++                                                                                      ++
-       |                                                                                        |
-       |                                                                                        |
-       |                                                                                        |
-  1600 ++                                                                                      ++
-       |                                                                                        |
-       |                                                                                        |
-       |                                                                                        |
-  1400 ++                                                                                      ++
-       ***                                                                                      |
-       |  *                                                                                     |
-       |   *                                                                                    |
-  1200 ++  *                                                                                   ++
-       |    *                                                                                   |
-       |    *                                                                                   |
-       |     *                                                                                  |
-  1000 ++    ***                                                                               ++
-       |        *********************************************************************           |
-       |                                                                                        |
-       |                                                                                        |
-   800 ++                                                                                      ++
-       |                                                                                        |
-       +              +              +              +             +              +              +
-       +--------------+--------------+--------------+-------------+--------------+--------------+
-       0              5              10             15            20             25             30
+     +-----*--------+--------------+---------------+--------------+--------------+--------------+
+     +     *        +              +               +              +              +              +
+     |     *                                                                                    |
+     |     *                                                                                    |
+     |     *                                                                                    |
+  30 ++    *                                                                                   ++
+     |     *                                                                                    |
+     |     *                                                                                    |
+     |     *                                                                                    |
+     |     *                                                                                    |
+  25 ++    *                                                                                   ++
+     |      *                                                                                   |
+     |      *                                                                                   |
+     |      *                                                                                   |
+     |       *                                                                                  |
+     |       *                                                                                  |
+  20 ++      *                                                                                 ++
+     |       *                                                                                  |
+     |        *                                                                                 |
+     |        ***********************************************************************           |
+     |                                                                                          |
+     |                                                                                          |
+  15 ++                                                                                        ++
+     |                                                                                          |
+     +              +              +               +              +              +              +
+     +--------------+--------------+---------------+--------------+--------------+--------------+
+     0              5              10              15             20             25             30
 
-INFO:cmp:MIN_NUM_ITER: 26   SPREAD: 945.8446716649
+INFO:cmp:MIN_NUM_ITER: 26   SPREAD: 17.0317092107
 ```
+
+![](D:\OneDrive\文档\GitHub\Wannier90_Toolbox\image\GaAs2_VASP_W90_cmp_zoomin.png)
+
+### GaAs Example
+
+We use GaAs as example. See input file at `./GaAs` folder. DOS is plotted below.
+
+![](image/dos_plot_no_mag.png)
+
+After self-consitant calculation of VASP, 
+
+1. `python pre_w90_tool.py template` to get how to write `wannier90.win`. 
+
+2. `python pre_w90_tool.py kpath` to get `Kpoint_Path` for Wannier90.
+
+3. `python pre_w90_tool.py band --path ../bnd` to generate p4vasp-type `bnd.dat` file. For simplicity, I recommend you copy or link this file to `wannier` folder.
+
+4. **Do DOS analysis**. This is the key feature for `Wannier90_Toolbox` and above description has been very detaild.
+
+5. Compare your Wannier90 interpolation result with VASP through `python cmp_vasp_w90.py GaAs2 --kernel unit,3.5,1 --ylim -1 1` . ⚠ Remind that the parameters for kernel function is middle point and its half width. You can also check maximum difference between VASP and Wannier90 for each bands and the total spreading convergence during the wannierisation.
+
+## TODO
+
+See `grep TODO *.py`
