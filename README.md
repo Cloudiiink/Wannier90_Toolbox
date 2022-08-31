@@ -291,7 +291,7 @@ optional arguments:
 Since the VASP and Wannier90 apply different kpoints in band calculation, we need to use B-spline to interpolate the Wannier90 band data and compare with VASP band data. The quality of Wannier90 result is evaulated from
 
 $$
-\Delta_i= \max_{\mathbf{k}}\left|\varepsilon_{i, \mathbf{k}}^{\mathrm{DFT}}-\varepsilon_{i, \mathbf{k}}^{\mathrm{TB}}\right|{\color{red} f\left(\varepsilon_{i, \mathbf{k}}^{\mathrm{DFT}}\right)}
+\Delta_i= \max_{\mathbf{k}}\left(\left|\varepsilon_{i, \mathbf{k}}^{\mathrm{DFT}}-\varepsilon_{i, \mathbf{k}}^{\mathrm{TB}}\right|{\color{red} f\left(\varepsilon_{i, \mathbf{k}}^{\mathrm{DFT}}\right)}\right)
 $$
 
 for each band. $f(\cdot)$ is the kernel function (unit function or gaussian function). $i$ and $\bf k$ represent band index and kpoint separately.
@@ -313,38 +313,35 @@ INFO:cmp:=== MAX DIFF of VASP vs W90 with each bands (meV) ===
 
 
 
-    1 ++----------------+-----------------+-----------------+-----------------+----------------++
-      +                 +                 +                 +                 +                 +
-      |                                                                                         |
-      |                                                                                         |
-      |                                                                                         |
-      |                                                                                         |
-  0.5 ++                                                                                       ++
-      |                                                                                         |
-      |                                                                                         |
-      |                                                                                         |
-      |                                                                                         |
-      |                                                                                         |
-    0 *******************************************************************************************
-      |                                                                                         |
-      |                                                                                         |
-      |                                                                                         |
-      |                                                                                         |
-      |                                                                                         |
-      |                                                                                         |
- -0.5 ++                                                                                       ++
-      |                                                                                         |
-      |                                                                                         |
-      |                                                                                         |
-      |                                                                                         |
-      +                 +                 +                 +                 +                 +
-   -1 ++----------------+-----------------+-----------------+-----------------+----------------++
-      1                 2                 3                 4                 5                 6
+  25 ++----------------+-----------------+------------------+-----------------+----------------++
+     +                 +                 +                  +                 +                 +
+     |                                                                                          |
+     |                                                      *                                   |
+     |                                                     * *                                  |
+  20 ++                                                   *   *                                ++
+     |                                                   *    *                                 |
+     |                                                  *      *                                |
+     |                                                 *        *                               |
+     |                                                *          *                              |
+  15 ++                                              *            *                            ++
+     |                                              *              *                            |
+     |                                             *               *                            |
+     |                                             *                *                           |
+     |                                            *                  *                          |
+  10 ++                                          *                    *                        ++
+     |                                          *                      *                        |
+     |                                         *                       *                        |
+     |                                        *                         *                       |
+     |                                       *                           *                      |
+   5 ++                                     *                             *                    ++
+     **************                        *                               *                    |
+     |             ****                   *                                 *                   |
+     |                 *******************                                  *                   |
+     +                 +                 +                  +                *+                 +
+   0 ++----------------+-----------------+------------------+-----------------*******************
+     1                 2                 3                  4                 5                 6
 
-Gnuplot warns: Warning: empty y range [0:0], adjusting to [-1:1]
-cmp_vasp_w90.py:160: RuntimeWarning: invalid value encountered in double_scalars
-  logger.info(f'Average dE (meV): {np.sum(dEs) / np.sum(wgts)}')
-INFO:cmp:Average dE (meV): nan
+INFO:cmp:Average dE (meV): 7.419081825327686
 INFO:cmp:Show spreading convergence:
 
 

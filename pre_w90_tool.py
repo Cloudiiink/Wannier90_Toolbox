@@ -274,7 +274,7 @@ def get_args():
     '''
     parser = argparse.ArgumentParser(description="Pre analysis before Wannier90 Interpolation.\n    dos: python pre_w90_tool.py dos --plot -e -4 7 --extra 'Bi,4-7,0-3;F,8-23,1-3'",     add_help=True)
 
-    parser.add_argument('mode', help='Mode: kpath, band, template, dos')
+    parser.add_argument('mode', help='Mode: kpath, band, template, dos (Actually only the first character is relevant.)')
     parser.add_argument('--path', default='.',
                         help='Default: .')
     parser.add_argument('--no-soc', action='store_true', default=False,
@@ -287,7 +287,7 @@ def get_args():
     parser.add_argument('--plot', default=False, action="store_true",
                         help='plot the dos distribution')
     parser.add_argument('--extra', action='store', type=str, default='',
-                        help='Extra input.')
+                        help='Extra input. In `template` mode, you can use `wann`, `basic` and `band`.')
     return parser.parse_args()
 
 if __name__ == "__main__":

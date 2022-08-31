@@ -141,8 +141,8 @@ def evaluate_cmp_vasp_w90(vkk, vee, wkk, wee, kernel='unit', mid=0, width=3):
         # wgts.append(np.sum(kernel(vee[i + nbnds_excl][vmask])) / len(dEi))
 
         # ! MAX DISTANCE
-        dEs.append(kernel(np.average(vee_i)) * dEi.max() * 1000)
-        wgts.append(kernel(np.average(vee_i)))
+        dEs.append(np.max(kernel(vee_i) * dEi) * 1000)
+        wgts.append(np.max(kernel(vee_i)))
 
     dEs, wgts = np.array(dEs), np.array(wgts)
     return dEs, wgts
@@ -190,7 +190,7 @@ def show_all_fonts():
 
 def get_efermi(args):
     if args.efermi:
-        efermi = float(args.efemri)
+        efermi = float(args.efermi)
     else:
         efermi_str = os.popen(f'grep fermi {args.path}/vasprun.xml').read().strip()
         m = re.match('.+ ((\-|\+)?\d+(\.\d+)?) .+', efermi_str)
